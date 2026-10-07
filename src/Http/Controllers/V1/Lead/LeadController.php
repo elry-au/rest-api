@@ -745,4 +745,26 @@ class LeadController extends Controller
             ],
         ];
     }
+
+    /**
+     * Create the standard procurement tasks for the lead's current stage
+     * (Procurement Portals pipeline only). Idempotent: existing generated
+     * tasks are reported as skipped, never duplicated or re-dated.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function createProcurementStageTasks(int $id)
+    {
+        $lead = $this->leadRepository->findOrFail($id);
+
+        $procurement = app(\Webkul\Lead\Services\ProcurementService::class);
+
+        if (! $procurement->isProcurementLead($lead)) {
+            return response()->json(['message' => 'This lead is not in the procurement pipeline.'], 404);
+        }
+
+        $result = app(\Webkul\Lead\Services\ProcurementStageTasks::class)->create($lead, auth()->user()?->id);
+
+        return new JsonResponse($result + ['tender_id' => \Webkul\Lead\Services\ProcurementService::tenderId($lead)]);
+    }
 }

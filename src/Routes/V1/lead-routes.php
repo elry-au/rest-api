@@ -30,6 +30,8 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => 'leads'], function (
 
         Route::put('attributes/edit/{id}', 'updateAttributes');
 
+        Route::post('{id}/procurement/stage-tasks', 'createProcurementStageTasks')->where('id', '[0-9]+');
+
         Route::put('stage/edit/{id}', 'updateStage');
 
         Route::put('product/{lead_id}', 'addProduct');
