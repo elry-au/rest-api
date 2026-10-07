@@ -60,7 +60,7 @@ class ActivityController extends Controller
     public function store()
     {
         $this->validate(request(), [
-            'type'          => 'required|in:call,meeting,lunch,note,file,email',
+            'type'          => 'required|in:call,meeting,lunch,task,note,file,email',
             'comment'       => 'required_if:type,note',
             'schedule_from' => 'required_unless:type,note,file',
             'schedule_to'   => 'required_unless:type,note,file',
@@ -126,7 +126,7 @@ class ActivityController extends Controller
         $this->findOrFailResource($this->activityRepository, $id);
 
         $this->validate(request(), [
-            'type'    => 'sometimes|required|in:call,meeting,lunch,note,file,email',
+            'type'    => 'sometimes|required|in:call,meeting,lunch,task,note,file,email',
             'lead_id' => 'nullable|exists:leads,id',
         ]);
 

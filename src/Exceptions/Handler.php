@@ -5,6 +5,7 @@ namespace Webkul\RestApi\Exceptions;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Auth\AuthenticationException;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -57,6 +58,21 @@ class Handler extends ExceptionHandler
 
         $this->renderable(function (NotFoundHttpException $e, Request $request) {
             return $this->jsonError(404);
+        });
+
+        /**
+         * A duplicate-key failure means the caller tried to create something that
+         * already exists (an organization name, a person's email, ...). Answer
+         * with a 409 that names the index, so API clients can re-fetch instead of
+         * treating it as an outage.
+         */
+        $this->renderable(function (UniqueConstraintViolationException $e, Request $request) {
+            preg_match("/for key '([^']+)'/", $e->getMessage(), $matches);
+
+            return response()->json([
+                'message' => 'A record with this value already exists.',
+                'index'   => $matches[1] ?? null,
+            ], 409);
         });
 
         /**
