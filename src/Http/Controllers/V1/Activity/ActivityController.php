@@ -41,6 +41,33 @@ class ActivityController extends Controller
     }
 
     /**
+     * Open (not done) tasks, calls, meetings and lunches across all leads, overdue
+     * first. Query params: owner_id, pipeline_id, due (overdue|today|this_week),
+     * type (task|call|meeting|lunch), limit (default 50, max 200).
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function open()
+    {
+        $filters = $this->validate(request(), [
+            'owner_id'    => 'nullable|integer',
+            'pipeline_id' => 'nullable|integer',
+            'due'         => 'nullable|in:'.implode(',', ActivityRepository::DUE_BUCKETS),
+            'type'        => 'nullable|in:'.implode(',', ActivityRepository::SCHEDULABLE_TYPES),
+            'limit'       => 'nullable|integer|min:1|max:200',
+        ]);
+
+        $activities = $this->activityRepository->getOpenActivities(
+            array_filter($filters, fn ($value) => $value !== null && $value !== ''),
+            (int) ($filters['limit'] ?? 50)
+        );
+
+        return new JsonResponse([
+            'data' => $activities->values(),
+        ]);
+    }
+
+    /**
      * Show resource.
      *
      * @return \Illuminate\Http\Response

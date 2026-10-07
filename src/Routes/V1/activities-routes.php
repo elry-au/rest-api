@@ -6,6 +6,7 @@ use Webkul\RestApi\Http\Controllers\V1\Activity\ActivityController;
 Route::group(['middleware' => 'auth:sanctum'], function () {
     Route::controller(ActivityController::class)->prefix('activities')->group(function () {
         Route::get('', 'index');
+        Route::get('open', 'open');
 
         Route::get('{id}', 'show')->where('id', '[0-9]+');
 
