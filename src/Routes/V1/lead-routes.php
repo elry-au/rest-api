@@ -32,6 +32,10 @@ Route::group(['middleware' => ['auth:sanctum'], 'prefix' => 'leads'], function (
 
         Route::post('{id}/procurement/stage-tasks', 'createProcurementStageTasks')->where('id', '[0-9]+');
 
+        Route::get('{id}/procurement/files', 'procurementFiles')->where('id', '[0-9]+');
+
+        Route::post('{id}/procurement/drive-folder', 'createProcurementDriveFolder')->where('id', '[0-9]+');
+
         Route::put('stage/edit/{id}', 'updateStage');
 
         Route::put('product/{lead_id}', 'addProduct');

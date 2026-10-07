@@ -767,4 +767,46 @@ class LeadController extends Controller
 
         return new JsonResponse($result + ['tender_id' => \Webkul\Lead\Services\ProcurementService::tenderId($lead)]);
     }
+
+    /**
+     * The tender's Google Drive folder tree: subfolders with their files, plus
+     * preview and open links. folder is null when the lead has no folder yet.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function procurementFiles(int $id)
+    {
+        $lead = $this->leadRepository->findOrFail($id);
+
+        if (! app(\Webkul\Lead\Services\ProcurementService::class)->isProcurementLead($lead)) {
+            return response()->json(['message' => 'This lead is not in the procurement pipeline.'], 404);
+        }
+
+        return new JsonResponse(app(\Webkul\Lead\Services\ProcurementDriveService::class)->tree($lead));
+    }
+
+    /**
+     * Create the tender's Drive folder with the standard subfolders (no-op if
+     * the lead already links to one) and return the tree.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function createProcurementDriveFolder(int $id)
+    {
+        $lead = $this->leadRepository->findOrFail($id);
+
+        if (! app(\Webkul\Lead\Services\ProcurementService::class)->isProcurementLead($lead)) {
+            return response()->json(['message' => 'This lead is not in the procurement pipeline.'], 404);
+        }
+
+        $drive = app(\Webkul\Lead\Services\ProcurementDriveService::class);
+
+        if (! $drive->isConfigured()) {
+            return response()->json(['message' => 'Google Drive is not configured on this CRM.'], 422);
+        }
+
+        $drive->ensureFolder($lead);
+
+        return new JsonResponse($drive->tree($lead->fresh()));
+    }
 }
