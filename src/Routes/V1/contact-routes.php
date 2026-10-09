@@ -20,6 +20,8 @@ Route::group([
 
         Route::get('{id}', 'show')->where('id', '[0-9]+');
 
+        Route::get('{id}/unsubscribe-link', 'unsubscribeLink')->where('id', '[0-9]+');
+
         Route::post('', 'store');
 
         Route::put('{id}', 'update');

@@ -61,6 +61,22 @@ class PersonController extends Controller
     }
 
     /**
+     * The person's public unsubscribe link, for the footer of outreach email.
+     * Stateless: the token is the person id encrypted under the CRM's APP_KEY.
+     */
+    public function unsubscribeLink(int $id): JsonResponse
+    {
+        $resource = $this->findOrFailResource($this->personRepository, $id);
+
+        return new JsonResponse([
+            'data' => [
+                'person_id' => $resource->id,
+                'url' => \Webkul\Contact\Services\UnsubscribeToken::url($resource->id),
+            ],
+        ]);
+    }
+
+    /**
      * Search person results.
      */
     public function search(): JsonResource

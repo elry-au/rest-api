@@ -26,6 +26,7 @@ class PersonResource extends JsonResource
             'organization'    => $this->when($this->organization, new OrganizationResource($this->organization)),
             'job_title'       => $this->job_title,
             'sales_owner'     => $this->when($this->user, new UserResource($this->user)),
+            'unsubscribe_url' => $this->when(class_exists(\Webkul\Contact\Services\UnsubscribeToken::class), fn () => \Webkul\Contact\Services\UnsubscribeToken::url($this->id)),
             'created_at'      => $this->created_at,
             'updated_at'      => $this->updated_at,
         ]);
