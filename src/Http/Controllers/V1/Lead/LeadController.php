@@ -364,6 +364,12 @@ class LeadController extends Controller
      */
     public function search(): AnonymousResourceCollection
     {
+        // ?attribute[buyer_reference]=X narrows to leads whose text custom attribute
+        // equals X (case-insensitive), so a tender's lead can be found directly.
+        if ($attributeMatch = \Webkul\Lead\Criteria\AttributeMatchCriteria::fromRequest()) {
+            $this->leadRepository->pushCriteria($attributeMatch);
+        }
+
         if ($userIds = $this->getAuthorizedUserIds()) {
             $results = $this->leadRepository
                 ->pushCriteria(app(RequestCriteria::class))
@@ -786,8 +792,9 @@ class LeadController extends Controller
     }
 
     /**
-     * Create the tender's Drive folder with the standard subfolders (no-op if
-     * the lead already links to one) and return the tree.
+     * Create the tender's Drive folder with the seven standard subfolders, or add
+     * any standard subfolders an existing folder is missing (never changing what is
+     * there), and return the tree.
      *
      * @return \Illuminate\Http\Response
      */

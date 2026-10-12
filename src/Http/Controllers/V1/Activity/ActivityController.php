@@ -102,6 +102,8 @@ class ActivityController extends Controller
          */
         $this->normalizeParticipantsInput();
 
+        $this->applyAssigneeInput();
+
         if (request('type') === 'meeting') {
             /**
              * Check if meeting is overlapping with other meetings.
@@ -166,6 +168,8 @@ class ActivityController extends Controller
          */
         $this->normalizeParticipantsInput();
 
+        $this->applyAssigneeInput($id);
+
         Event::dispatch('activity.update.before', $id);
 
         $activity = $this->activityRepository->update(request()->all(), $id);
@@ -199,6 +203,44 @@ class ActivityController extends Controller
      *
      * @return void
      */
+    /**
+     * `assignee` (a user id, email, full name or unique first name) names who a
+     * task is for. It becomes the first user participant, which is what
+     * GET /activities/open reports as the assignee. On update without explicit
+     * participants it replaces the user participants and keeps the persons.
+     */
+    protected function applyAssigneeInput(?int $activityId = null): void
+    {
+        $assignee = request()->input('assignee');
+
+        if ($assignee === null || $assignee === '') {
+            return;
+        }
+
+        $user = \Webkul\User\Support\UserResolver::resolve($assignee);
+
+        if (! $user) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                'assignee' => sprintf('No single CRM user matches "%s".', is_scalar($assignee) ? $assignee : 'that value'),
+            ]);
+        }
+
+        if (request()->has('participants')) {
+            $participants = request()->input('participants');
+
+            $participants['users'] = array_values(array_unique(array_merge([$user->id], $participants['users'] ?? [])));
+        } else {
+            $existing = $activityId ? $this->activityRepository->find($activityId)?->participants : null;
+
+            $participants = [
+                'users' => [$user->id],
+                'persons' => $existing ? $existing->pluck('person_id')->filter()->values()->all() : [],
+            ];
+        }
+
+        request()->merge(['participants' => $participants]);
+    }
+
     protected function normalizeParticipantsInput()
     {
         if (! request()->has('participants')) {
