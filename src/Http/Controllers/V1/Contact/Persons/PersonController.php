@@ -202,6 +202,22 @@ class PersonController extends Controller
             unset($data['contact_numbers']);
         }
 
+        // The owner (`user_id`) may be given as a user id, email, full name or
+        // unique first name, the same as an activity's `assignee`.
+        $owner = $data['user_id'] ?? null;
+
+        if (is_string($owner) && $owner !== '' && ! ctype_digit($owner)) {
+            $user = \Webkul\User\Support\UserResolver::resolve($owner);
+
+            if (! $user) {
+                throw \Illuminate\Validation\ValidationException::withMessages([
+                    'user_id' => sprintf('No single CRM user matches "%s".', $owner),
+                ]);
+            }
+
+            $data['user_id'] = $user->id;
+        }
+
         return $data;
     }
 
