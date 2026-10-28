@@ -142,6 +142,8 @@ class ActivityController extends Controller
 
         $this->applyAssigneeInput();
 
+        $this->applyAdditionalInput();
+
         if (request('type') === 'meeting') {
             /**
              * Check if meeting is overlapping with other meetings.
@@ -207,6 +209,8 @@ class ActivityController extends Controller
         $this->normalizeParticipantsInput();
 
         $this->applyAssigneeInput($id);
+
+        $this->applyAdditionalInput($id);
 
         Event::dispatch('activity.update.before', $id);
 
@@ -277,6 +281,33 @@ class ActivityController extends Controller
         }
 
         request()->merge(['participants' => $participants]);
+    }
+
+    /**
+     * `additional` sent as an object is merged into the activity's stored JSON
+     * (a key set to null is removed), so a client can keep its own keys, such
+     * as a link to a task in another tool, without clobbering anything else.
+     * A JSON string still replaces the whole value, as before. The column has
+     * no cast, so the merged value is encoded here.
+     */
+    protected function applyAdditionalInput(?int $activityId = null): void
+    {
+        $additional = request()->input('additional');
+
+        if (! is_array($additional)) {
+            return;
+        }
+
+        $stored = $activityId ? $this->activityRepository->find($activityId)?->additional : null;
+
+        $current = is_string($stored) ? json_decode($stored, true) : $stored;
+
+        $merged = array_filter(
+            array_merge(is_array($current) ? $current : [], $additional),
+            fn ($value) => $value !== null
+        );
+
+        request()->merge(['additional' => $merged ? json_encode($merged, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : null]);
     }
 
     protected function normalizeParticipantsInput()
