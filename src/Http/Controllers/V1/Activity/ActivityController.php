@@ -3,6 +3,7 @@
 namespace Webkul\RestApi\Http\Controllers\V1\Activity;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
@@ -35,9 +36,21 @@ class ActivityController extends Controller
      */
     public function index()
     {
-        $activities = $this->allResources($this->activityRepository);
+        /**
+         * Select each activity's lead in the same query and eager load what the
+         * resource renders, so a page costs a fixed number of queries.
+         */
+        $query = $this->activityRepository->query()
+            ->select('activities.*')
+            ->selectSub(
+                DB::table('lead_activities')
+                    ->selectRaw('MIN(lead_id)')
+                    ->whereColumn('lead_activities.activity_id', 'activities.id'),
+                'lead_id'
+            )
+            ->with(['participants.user', 'participants.person', 'files']);
 
-        return ActivityResource::collection($activities);
+        return ActivityResource::collection($this->applyListQuery($query));
     }
 
     /**
@@ -174,12 +187,12 @@ class ActivityController extends Controller
 
         $activity = $this->activityRepository->update(request()->all(), $id);
 
+        /**
+         * Move the activity to the given lead rather than adding a second link,
+         * matching the admin panel's update.
+         */
         if ($leadId = request()->input('lead_id')) {
-            $lead = $this->leadRepository->find($leadId);
-
-            if (! $lead->activities->contains($id)) {
-                $lead->activities()->attach($id);
-            }
+            $activity->leads()->sync([$leadId]);
         }
 
         Event::dispatch('activity.update.after', $activity);
