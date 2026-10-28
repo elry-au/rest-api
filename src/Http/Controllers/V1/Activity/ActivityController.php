@@ -3,6 +3,7 @@
 namespace Webkul\RestApi\Http\Controllers\V1\Activity;
 
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Storage;
@@ -36,6 +37,12 @@ class ActivityController extends Controller
      */
     public function index()
     {
+        $filters = $this->validate(request(), [
+            'updated_since' => 'nullable|date',
+            'lead_id'       => 'nullable|integer',
+            'limit'         => 'nullable|integer|min:1|max:200',
+        ]);
+
         /**
          * Select each activity's lead in the same query and eager load what the
          * resource renders, so a page costs a fixed number of queries.
@@ -49,6 +56,24 @@ class ActivityController extends Controller
                 'lead_id'
             )
             ->with(['participants.user', 'participants.person', 'files']);
+
+        /**
+         * Timestamps are stored in the app timezone, so an ISO-8601 value with
+         * an offset is converted before comparing.
+         */
+        if (! empty($filters['updated_since'])) {
+            $query->where(
+                'activities.updated_at',
+                '>=',
+                Carbon::parse($filters['updated_since'])->setTimezone(config('app.timezone'))
+            );
+        }
+
+        if (! empty($filters['lead_id'])) {
+            $query->whereExists(fn ($exists) => $exists->from('lead_activities')
+                ->whereColumn('lead_activities.activity_id', 'activities.id')
+                ->where('lead_activities.lead_id', $filters['lead_id']));
+        }
 
         return ActivityResource::collection($this->applyListQuery($query));
     }
